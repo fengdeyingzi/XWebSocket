@@ -224,7 +224,7 @@ public class WebSocketTestWindow {
 		Box horizontalBox_send = Box.createHorizontalBox();
 		frame.getContentPane().add(horizontalBox_send, BorderLayout.SOUTH);
 		
-		JEditorPane edit_send = new JEditorPane();
+		final JEditorPane edit_send = new JEditorPane();
 		edit_send.setMinimumSize(new Dimension(400,32));
 		edit_send.setToolTipText("输入要发送的内容");
 		horizontalBox_send.add(edit_send);
@@ -243,6 +243,7 @@ public class WebSocketTestWindow {
 		text_left.setRows(10);
 		JScrollPane scroll_right = new JScrollPane(text_right);
 		frame.getContentPane().add(scroll_right, BorderLayout.CENTER);
+		final WebSocketClient client = new WebSocketClient();
 		final Handler handler = new Handler(Looper.getMainLooper()) {
 			
 			@Override
@@ -317,13 +318,22 @@ public class WebSocketTestWindow {
 				horizontalBox_url.add(btn_go);
 				frame.setTitle("WebSocket测试 - 风的影子");
 				
+				btn_send.addActionListener(new ActionListener() {
+					
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						client.sendMessage(edit_send.getText());
+						
+					}
+				});
+				
 				btn_go.addActionListener(new ActionListener() {
 					
 					@Override
 					public void actionPerformed(ActionEvent actionevent) {
 						final String url = edit_url.getText();
 						
-						final WebSocketClient client = new WebSocketClient();
+						
 						client.setWebSocketListener(listener);
 						new Thread(new Runnable() {
 							

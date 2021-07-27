@@ -3,6 +3,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.Timer;
@@ -10,7 +11,7 @@ import java.util.TimerTask;
 
 import com.xl.util.ByteBuffer;
 
-public class WebSocketClient {
+public class WebSocketClient{
 	InputStream inputStream;
 	OutputStream outputStream;
 	Socket socket;
@@ -20,6 +21,11 @@ public class WebSocketClient {
 	long startTime;
 	Timer timer_heartbeat;
 	boolean isSendHearBeat; //是否发送心跳包
+	String host;
+	String road;
+	int port;
+	boolean isRun;
+	String key = "puVOuWb7rel6z2AVZBKnfw==";
 	
 
 	public static void main(String[] args) {
@@ -116,7 +122,7 @@ public class WebSocketClient {
 	    	data[index+1] = (byte)(num&0xff);
 	    } 
 	//发送字符数据
-	void sendMessage(String text){
+	public void sendMessage(String text){
 		int isMask = 1;
 		byte[] maskKey = new byte[]{0x66,0x66,0x66,0x66};
 		byte temp1,temp2;
@@ -243,6 +249,143 @@ public class WebSocketClient {
 	public void setWebSocketListener(WebSocketListener lis){
 		this.listener = lis;
 	}
+	
+	//连接指定url
+		String getHostByName(String host){
+			InetAddress address = null;
+			if(isIP(host)){
+				return host;
+			}
+			try {
+				address = InetAddress.getByName(host);
+			} catch (UnknownHostException e) {
+				e.printStackTrace();
+				return null;
+			}
+			return address.getHostAddress();
+		}
+		
+		//判断host是否为ip
+		public boolean isIP(String host){
+			for(int i=0;i<host.length();i++){
+				if(host.charAt(i)>='0' && host.charAt(i)<='9'){
+					
+				}else if(host.charAt(i) == '.'){
+					
+				}
+				else{
+					return false;
+				}
+			}
+			return true;
+		}
+		
+		
+		private void run() {
+
+			String ip = getHostByName(host);
+			startTime = System.currentTimeMillis();
+			boolean isOpen = false;
+			boolean isWrite = false;
+			timer_heartbeat = new Timer();
+			timer_heartbeat.schedule(new TimerTask() {
+	            @Override
+	            public void run() {
+	                if(System.currentTimeMillis() - startTime > 5000){
+	                	if(isSendHearBeat){
+	                		sendMessage("#");
+	                	}
+	                	
+//	                	sendMessage("{\"action\":\"setname\", \"data\":\"test\"}");
+	                	startTime = System.currentTimeMillis();
+	                }
+	            }
+	        },0, 1 * 1000);
+
+			
+			StringBuffer sendBuffer = new StringBuffer();
+			sendBuffer.append(String.format("GET %s HTTP/1.1\r\n", road));
+			sendBuffer.append("Connection:Upgrade\r\n");
+			sendBuffer.append(String.format("Host:%s:%d\r\n", host, port));
+			sendBuffer.append("Origin:null\r\n");
+			sendBuffer.append("Sec-WebSocket-Extensions:x-webkit-deflate-frame\r\n");
+			sendBuffer.append(String.format("Sec-WebSocket-Key:%s\r\n", key));
+			sendBuffer.append("Sec-WebSocket-Version:13\r\n");
+			sendBuffer.append("Upgrade:websocket\r\n");
+			sendBuffer.append("\r\n");
+
+			System.out.println("连接websocket" + ip);
+			try {
+				socket = new Socket(ip, port);
+				if(isSendHearBeat)
+				socket.setSoTimeout(10000);
+				startTime = System.currentTimeMillis();
+				outputStream = socket.getOutputStream();
+				outputStream.write(sendBuffer.toString().getBytes());
+				System.out.println("write " + sendBuffer.toString());
+				// --输出服务器传回的消息的头信息
+				InputStream inputStream = socket.getInputStream();
+				int c = 0;
+				while ((c = inputStream.read()) != -1) {
+					recvData.put((byte) (c & 0xff));
+					if (!isOpen) {
+						if (isHeadSuccess()) {
+							isOpen = true;
+							System.out.println("----------- " + new String(recvData.getBytes()));
+							if(listener!=null)listener.onOpen(this);
+						}
+					}
+					else{
+						messageData.put((byte)(c&0xff));
+						byte[] msgData = readFrame();
+						
+						if(msgData != null){
+							System.out.println("--------- 读取帧成功 \n "+new String(msgData));
+							startTime = System.currentTimeMillis();
+							if(listener!=null)
+							listener.onMessage(this, new String(msgData));
+							if(isWrite == false){
+//								sendMessage("{\"action\":\"setname\", \"data\":\"test\"}");
+								isWrite = true;
+							}
+							
+//							break;
+						}
+						else {
+							if(System.currentTimeMillis() - startTime > 5000){
+								System.out.println("发送心跳包");
+								sendMessage("#");
+								startTime = System.currentTimeMillis();
+							}
+							else{
+								
+							}
+						}
+					}
+
+					// System.out.println(""+c);
+
+					;
+				}
+
+				// 关闭流
+				inputStream.close();
+				socket = null;
+				System.out.println("socket关闭");
+				if(listener!=null)listener.onClose(this);
+				// System.out.println(new String(getBody(),"UTF-8"));
+
+			} catch (UnknownHostException e) {
+				e.printStackTrace();
+				socket = null;
+				if(listener!=null)listener.onError(this, 1);
+			} catch (IOException e) {
+				e.printStackTrace();
+				socket = null;
+				if(listener!=null)listener.onError(this, 2);
+			}
+			System.out.println("--end");
+		}
 
 	/*
 	 * 服务器返回数据 HTTP/1.1 101 Switching Protocols Upgrade: websocket Connection:
@@ -250,112 +393,21 @@ public class WebSocketClient {
 	 */
 	public void start(String host, String road,int port) {
 		String key = "puVOuWb7rel6z2AVZBKnfw==";
-		
-		String ip = "119.29.215.145";
-		startTime = System.currentTimeMillis();
-		boolean isOpen = false;
-		boolean isWrite = false;
-		timer_heartbeat = new Timer();
-		timer_heartbeat.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                if(System.currentTimeMillis() - startTime > 5000){
-                	if(isSendHearBeat){
-                		sendMessage("#");
-                	}
-                	
-//                	sendMessage("{\"action\":\"setname\", \"data\":\"test\"}");
-                	startTime = System.currentTimeMillis();
-                }
-            }
-        },0, 1 * 1000);
-
-		
-		StringBuffer sendBuffer = new StringBuffer();
-		sendBuffer.append(String.format("GET %s HTTP/1.1\r\n", road));
-		sendBuffer.append("Connection:Upgrade\r\n");
-		sendBuffer.append(String.format("Host:%s:%d\r\n", host, port));
-		sendBuffer.append("Origin:null\r\n");
-		sendBuffer.append("Sec-WebSocket-Extensions:x-webkit-deflate-frame\r\n");
-		sendBuffer.append(String.format("Sec-WebSocket-Key:%s\r\n", key));
-		sendBuffer.append("Sec-WebSocket-Version:13\r\n");
-		sendBuffer.append("Upgrade:websocket\r\n");
-		sendBuffer.append("\r\n");
-
-		System.out.println("连接websocket" + ip);
-		try {
-			socket = new Socket(ip, port);
-			if(isSendHearBeat)
-			socket.setSoTimeout(10000);
-			startTime = System.currentTimeMillis();
-			outputStream = socket.getOutputStream();
-			outputStream.write(sendBuffer.toString().getBytes());
-			System.out.println("write " + sendBuffer.toString());
-			// --输出服务器传回的消息的头信息
-			InputStream inputStream = socket.getInputStream();
-			int c = 0;
-			while ((c = inputStream.read()) != -1) {
-				recvData.put((byte) (c & 0xff));
-				if (!isOpen) {
-					if (isHeadSuccess()) {
-						isOpen = true;
-						System.out.println("----------- " + new String(recvData.getBytes()));
-						if(listener!=null)listener.onOpen(this);
-					}
-				}
-				else{
-					messageData.put((byte)(c&0xff));
-					byte[] msgData = readFrame();
-					
-					if(msgData != null){
-						System.out.println("--------- 读取帧成功 \n "+new String(msgData));
-						startTime = System.currentTimeMillis();
-						if(listener!=null)
-						listener.onMessage(this, new String(msgData));
-						if(isWrite == false){
-//							sendMessage("{\"action\":\"setname\", \"data\":\"test\"}");
-							isWrite = true;
-						}
-						
-//						break;
-					}
-					else {
-						if(System.currentTimeMillis() - startTime > 5000){
-							System.out.println("发送心跳包");
-							sendMessage("#");
-							startTime = System.currentTimeMillis();
-						}
-						else{
-							
-						}
-					}
-				}
-
-				// System.out.println(""+c);
-
-				;
+		this.host = host;
+		this.road = road;
+		this.port = port;
+		isRun = true;
+		new Thread(new Runnable() {
+			
+			@Override
+			public void run() {
+				WebSocketClient.this.run();
 			}
-
-			// 关闭流
-			inputStream.close();
-			socket = null;
-			System.out.println("socket关闭");
-			if(listener!=null)listener.onClose(this);
-			// System.out.println(new String(getBody(),"UTF-8"));
-
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
-			socket = null;
-			if(listener!=null)listener.onError(this, 1);
-		} catch (IOException e) {
-			e.printStackTrace();
-			socket = null;
-			if(listener!=null)listener.onError(this, 2);
-		}
-		System.out.println("--end");
+		}).start();
 	}
 	
 	public void stop(){
+		isRun = false;
 		timer_heartbeat.cancel();
 		if(socket!=null){
 			try {
@@ -365,6 +417,7 @@ public class WebSocketClient {
 			}
 			socket = null;
 		}
+		
 	}
 	
 	public interface WebSocketListener{
