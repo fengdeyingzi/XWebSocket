@@ -6,11 +6,11 @@
 
 
 
-调用方法：
+websocket客户端调用方法：
 
 ~~~java
 		WebSocketClient client = new WebSocketClient();
-		String host = "websocket.yzjlb.net";
+		String host = "127.0.0.1";
 		String road = "/socket";
 		int port = 2022;
 		WebSocketListener socketListener = new WebSocketListener() {
@@ -42,4 +42,36 @@
 		client.setWebSocketListener(socketListener);
 		client.start(host, road, port);
 ~~~
+
+websocket服务端调用方法：
+
+```
+            WebSocketServer server = new WebSocketServer("127.0.0.1", 2024);
+
+			server.setListener(new WebSocketServerListener() {
+
+				@Override
+				public void onOpen(WebSocketConnect con) {
+					System.out.println("-------- onOpen");
+					con.sendMessage("Hello, I am java server");
+				}
+
+				@Override
+				public void onMessage(WebSocketConnect con, String msg) {
+					System.out.println("-------- onMessage\n" + msg);
+				}
+
+				@Override
+				public void onError(WebSocketConnect con, int code, String error) {
+					System.out.println("------- onError " + error);
+				}
+
+				@Override
+				public void onClose(WebSocketConnect con) {
+					System.out.println("-------- onClose");
+				}
+			});
+			
+			server.start();
+```
 
