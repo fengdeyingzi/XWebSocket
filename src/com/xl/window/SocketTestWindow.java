@@ -1,5 +1,6 @@
 package com.xl.window;
 
+
 import java.awt.EventQueue;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -15,25 +16,26 @@ import javax.swing.JEditorPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
+import com.xl.socket.SocketClient;
+import com.xl.socket.SocketClient.SocketListener;
 import com.xl.util.Str;
-import com.xl.websocket.WebSocketClient;
 import com.xl.websocket.WebSocketClient.WebSocketListener;
 
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 
-public class WebSocketTestWindow {
+public class SocketTestWindow {
 
 	public JFrame frame;
 	private JTextField edit_url;
-	private WebSocketClient client;
+	private SocketClient client;
 	
 
 	/**
 	 * Create the application.
 	 */
-	public WebSocketTestWindow() {
+	public SocketTestWindow() {
 		initialize();
 	}
 	
@@ -243,7 +245,6 @@ public class WebSocketTestWindow {
 		text_left.setRows(10);
 		JScrollPane scroll_right = new JScrollPane(text_right);
 		frame.getContentPane().add(scroll_right, BorderLayout.CENTER);
-		
 		final Handler handler = new Handler(Looper.getMainLooper()) {
 			
 			@Override
@@ -257,10 +258,10 @@ public class WebSocketTestWindow {
 				
 			}
 		};
-		final WebSocketClient.WebSocketListener listener = new WebSocketListener() {
+		final SocketClient.SocketListener listener = new SocketListener() {
 			
 			@Override
-			public void onOpen(WebSocketClient client) {
+			public void onOpen(SocketClient client) {
 				Message message = new Message();
 				message.what = 1;
 				message.obj = "--> onOpen\n";
@@ -270,7 +271,7 @@ public class WebSocketTestWindow {
 			}
 			
 			@Override
-			public void onMessage(WebSocketClient client, String msg) {
+			public void onMessage(SocketClient client, String msg) {
 				System.out.println("--> onMessage");
 				Message message = new Message();
 				message.what = 2;
@@ -281,7 +282,7 @@ public class WebSocketTestWindow {
 			}
 			
 			@Override
-			public void onError(WebSocketClient client, int err) {
+			public void onError(SocketClient client, int err) {
 				Message message = new Message();
 				message.what = 1;
 				message.obj = "--> onError\n";
@@ -291,7 +292,7 @@ public class WebSocketTestWindow {
 			}
 			
 			@Override
-			public void onClose(WebSocketClient client) {
+			public void onClose(SocketClient client) {
 				Message message = new Message();
 				message.what = 1;
 				message.obj = "--> onClose\n";
@@ -316,28 +317,16 @@ public class WebSocketTestWindow {
 				
 				JButton btn_go = new JButton("连接");
 				horizontalBox_url.add(btn_go);
-				frame.setTitle("WebSocket测试 - 风的影子");
-				
-				btn_send.addActionListener(new ActionListener() {
-					
-					@Override
-					public void actionPerformed(ActionEvent e) {
-						if(client != null)
-						client.sendMessage(edit_send.getText());
-						
-					}
-				});
+				frame.setTitle("Socket测试 - 风的影子");
 				
 				btn_go.addActionListener(new ActionListener() {
 					
 					@Override
 					public void actionPerformed(ActionEvent actionevent) {
 						final String url = edit_url.getText();
-						if(client!=null){
-							client.stop();
-						}
-						client = new WebSocketClient();
-						client.setWebSocketListener(listener);
+						
+						 client = new SocketClient();
+						client.setSocketListener(listener);
 						new Thread(new Runnable() {
 							
 							@Override
@@ -346,8 +335,17 @@ public class WebSocketTestWindow {
 								String road = getUrlRoad(url);
 								int port = getUrlPort(url);
 								client.start(host, road, port);
+								
 							}
 						}).start();
+						
+					}
+				});
+				btn_send.addActionListener(new ActionListener() {
+					
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						client.sendMessage(edit_send.getText());
 						
 					}
 				});

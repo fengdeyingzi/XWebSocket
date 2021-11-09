@@ -28,40 +28,7 @@ public class WebSocketClient{
 	String key = "puVOuWb7rel6z2AVZBKnfw==";
 	
 
-	public static void main(String[] args) {
-		WebSocketClient client = new WebSocketClient();
-		String host = "websocket.yzjlb.net";
-		String road = "/socket";
-		int port = 2022;
-		WebSocketListener socketListener = new WebSocketListener() {
-			
-			@Override
-			public void onOpen(WebSocketClient client) {
-				System.out.println("onOpen");
-				
-			}
-			
-			@Override
-			public void onMessage(WebSocketClient client, String msg) {
-				System.out.println("onMessage");
-				
-			}
-			
-			@Override
-			public void onError(WebSocketClient client, int err) {
-				System.out.println("onError");
-				
-			}
-			
-			@Override
-			public void onClose(WebSocketClient client) {
-				System.out.println("onClose");
-				
-			}
-		};
-		client.setWebSocketListener(socketListener);
-		client.start(host, road, port);
-	}
+
 
 	// 判断头信息是否获取完成
 	boolean isHeadSuccess() {
@@ -343,7 +310,7 @@ public class WebSocketClient{
 							System.out.println("--------- 读取帧成功 \n "+new String(msgData));
 							startTime = System.currentTimeMillis();
 							if(listener!=null)
-							listener.onMessage(this, new String(msgData));
+							listener.onMessage(this, new String(msgData,"UTF-8"));
 							if(isWrite == false){
 //								sendMessage("{\"action\":\"setname\", \"data\":\"test\"}");
 								isWrite = true;
