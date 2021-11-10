@@ -9,9 +9,12 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import com.xl.util.FileUtils;
+import com.xl.util.XConnect;
 import com.xl.websocket.WebSocketServer;
 import com.xl.websocket.WebSocketServer.WebSocketConnect;
 import com.xl.websocket.WebSocketServer.WebSocketServerListener;
+
+import android.os.Looper;
 
 /*
  客户端：
@@ -65,9 +68,21 @@ import com.xl.websocket.WebSocketServer.WebSocketServerListener;
 public class QQChatServerMain {
 
 	public static void main(String[] args) {
-		QQChatServer server = new QQChatServerMain().new QQChatServer();
-		server.start();
+		// 启动looper
+        Looper.prepare(true);
+		
+		new Thread(new Runnable() {
+			
+			@Override
+			public void run() {
+				QQChatServer server = new QQChatServerMain().new QQChatServer();
+				server.start();
+				
+			}
+		}).start();
+		
 
+        Looper.loop();
 	}
 
 	public class UserItem {
@@ -135,6 +150,44 @@ public class QQChatServerMain {
 			return true;
 
 		}
+		
+		//获取qq昵称
+		  String getQQName(final WebSocketConnect con, final long qq)  {
+//		    print("获取QQ昵称：${qq}");
+			  XConnect connect = new XConnect("https://r.qzone.qq.com/fcg-bin/cgi_get_portrait.fcg?uins="+qq, new XConnect.PostGetInfoListener() {
+				
+				@Override
+				public void onPostGetText(String text) {
+					System.out.println(text);
+				    int start = 0;
+				    int end = 0;
+				    int type = 0;
+				    
+				    for (int i = text.length() - 1; i > 0; i--) {
+				      if (type == 0) {
+				        if (text.charAt(i) == '\"') {
+				          end = i;
+				          type = 1;
+				        }
+				      } else {
+				        if (text.charAt(i) == '\"') {
+				          start = i + 1;
+				          break;
+				        }
+				      }
+				    }
+				    if (start == 0 || end == 0) {
+				      return ;
+				    }
+				    String name = text.substring(start, end);
+					sendName(con, qq, name);
+				}
+			});
+			  connect.setCoding("GBK");
+			  connect.start();
+		    
+		    return "";
+		  }
 
 		// 读取用户列表
 		void readUserList() {
@@ -222,6 +275,12 @@ public class QQChatServerMain {
 			} else if (item.action.equals("sendimg")) {
 				list_msg.add(item);
 			}
+			if (list_msg.size() > 200) {
+				list_msg.remove(0);
+			}
+			if (list_msg.size() > 200) {
+				list_msg.remove(0);
+			}
 			saveHistoryMsg();
 		}
 
@@ -297,6 +356,17 @@ public class QQChatServerMain {
 				item.con.sendMessage(jsonObject.toString());
 			}
 		}
+		
+		// 发送消息给所有人
+				public void sendXmlAll(Long qq, String msg) {
+					JSONObject jsonObject = new JSONObject();
+					jsonObject.put("action", "sendxml");
+					jsonObject.put("data", msg);
+					jsonObject.put("id", qq);
+					for (ChatItem item : list_con) {
+						item.con.sendMessage(jsonObject.toString());
+					}
+				}
 
 		// 发送图片给所有人
 		public void sendImgAll(Long qq, String msg) {
@@ -321,6 +391,14 @@ public class QQChatServerMain {
 			JSONObject jsonObject = new JSONObject();
 			jsonObject.put("action", "sendimg");
 			jsonObject.put("data", msg);
+			jsonObject.put("id", id);
+			con.sendMessage(jsonObject.toString());
+		}
+		
+		public void sendName(WebSocketConnect con, Long id, String name) {
+			JSONObject jsonObject = new JSONObject();
+			jsonObject.put("action", "username");
+			jsonObject.put("data", name);
 			jsonObject.put("id", id);
 			con.sendMessage(jsonObject.toString());
 		}
@@ -370,7 +448,7 @@ public class QQChatServerMain {
 						String action = jsonObject.optString("action");
 						String data = jsonObject.optString("data");
 						long id = jsonObject.optLong("id");
-						MsgItem msgItem = new MsgItem(action, data, id);
+						
 						if (action.equals("register")) {
 							if (checkUserCon(id)) {
 								sendErr(con, "用户已存在");
@@ -384,7 +462,7 @@ public class QQChatServerMain {
 							}
 						} else if (action.equals("login")) {
 							if (checkUser(id, data)) {
-								
+
 								ChatItem userItem = new ChatItem(id, con);
 								list_con.add(userItem);
 								sendHistoryMsg(con);
@@ -394,16 +472,52 @@ public class QQChatServerMain {
 								sendErr(con, "登录失败");
 							}
 
+							
 						} else if (action.equals("sendmsg")) {
-							id = curItem.qq;
-							sendMsgAll(id, data);
-
-							addHistoryMsg(msgItem);
+							MsgItem msgItem = new MsgItem(action, data, id);
+							if(curItem != null){
+								id = curItem.qq;
+							if (checkMsg(msgItem)) {
+								sendMsgAll(id, data);
+								msgItem.id = curItem.qq;
+								addHistoryMsg(msgItem);
+							} else {
+								sendPrompt(con, "消息发送失败");
+							}
+							}
+						}else if (action.equals("sendxml")) {
+							MsgItem msgItem = new MsgItem(action, data, id);
+							if(curItem != null){
+								id = curItem.qq;
+							if (checkMsg(msgItem)) {
+								sendXmlAll(id, data);
+								msgItem.id = curItem.qq;
+								addHistoryMsg(msgItem);
+							} else {
+								sendPrompt(con, "消息发送失败");
+							}
+							}
 						} else if (action.equals("sendimg")) {
-							sendImgAll(id, data);
-							addHistoryMsg(msgItem);
+							MsgItem msgItem = new MsgItem(action, data, id);
+							if(curItem != null){
+								id = curItem.qq;
+								if (checkMsg(msgItem)) {
+								sendImgAll(id, data);
+								msgItem.id = curItem.qq;
+								addHistoryMsg(msgItem);
+							} else {
+								sendPrompt(con, "消息发送失败");
+							}
+							}
+							
+
 						} else if (action.equals("exit")) {
 
+						} else if(action.equals("getname")){
+							if(curItem != null){
+								getQQName(con, id);
+							}
+							
 						}
 					}
 				}
@@ -440,7 +554,7 @@ public class QQChatServerMain {
 						for (int i = 0; i < list_con.size(); i++) {
 							WebSocketConnect connect = list_con.get(i).con;
 							if (connect.getEndTime() < System.currentTimeMillis() - 60000) {
-								System.out.println("用户"+list_con.get(i).qq+"已掉线");
+								System.out.println("用户" + list_con.get(i).qq + "已掉线");
 								list_con.remove(i);
 								break;
 							}

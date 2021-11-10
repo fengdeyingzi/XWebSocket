@@ -8,9 +8,6 @@ public class SocketServerMain {
 		System.out.println(re);
 		WebSocketServer server = new WebSocketServer("127.0.0.1", 2024);
 		server.start();
-		
-		
-		
 	}
 	
 	public static byte[] maskBytes(byte[] data, byte[] maskKey) {
