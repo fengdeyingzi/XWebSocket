@@ -69,20 +69,19 @@ public class QQChatServerMain {
 
 	public static void main(String[] args) {
 		// 启动looper
-        Looper.prepare(true);
-		
+		Looper.prepare(true);
+
 		new Thread(new Runnable() {
-			
+
 			@Override
 			public void run() {
 				QQChatServer server = new QQChatServerMain().new QQChatServer();
 				server.start();
-				
+
 			}
 		}).start();
-		
 
-        Looper.loop();
+		Looper.loop();
 	}
 
 	public class UserItem {
@@ -150,44 +149,45 @@ public class QQChatServerMain {
 			return true;
 
 		}
-		
-		//获取qq昵称
-		  String getQQName(final WebSocketConnect con, final long qq)  {
-//		    print("获取QQ昵称：${qq}");
-			  XConnect connect = new XConnect("https://r.qzone.qq.com/fcg-bin/cgi_get_portrait.fcg?uins="+qq, new XConnect.PostGetInfoListener() {
-				
-				@Override
-				public void onPostGetText(String text) {
-					System.out.println(text);
-				    int start = 0;
-				    int end = 0;
-				    int type = 0;
-				    
-				    for (int i = text.length() - 1; i > 0; i--) {
-				      if (type == 0) {
-				        if (text.charAt(i) == '\"') {
-				          end = i;
-				          type = 1;
-				        }
-				      } else {
-				        if (text.charAt(i) == '\"') {
-				          start = i + 1;
-				          break;
-				        }
-				      }
-				    }
-				    if (start == 0 || end == 0) {
-				      return ;
-				    }
-				    String name = text.substring(start, end);
-					sendName(con, qq, name);
-				}
-			});
-			  connect.setCoding("GBK");
-			  connect.start();
-		    
-		    return "";
-		  }
+
+		// 获取qq昵称
+		String getQQName(final WebSocketConnect con, final long qq) {
+			// print("获取QQ昵称：${qq}");
+			XConnect connect = new XConnect("https://r.qzone.qq.com/fcg-bin/cgi_get_portrait.fcg?uins=" + qq,
+					new XConnect.PostGetInfoListener() {
+
+						@Override
+						public void onPostGetText(String text) {
+							System.out.println(text);
+							int start = 0;
+							int end = 0;
+							int type = 0;
+
+							for (int i = text.length() - 1; i > 0; i--) {
+								if (type == 0) {
+									if (text.charAt(i) == '\"') {
+										end = i;
+										type = 1;
+									}
+								} else {
+									if (text.charAt(i) == '\"') {
+										start = i + 1;
+										break;
+									}
+								}
+							}
+							if (start == 0 || end == 0) {
+								return;
+							}
+							String name = text.substring(start, end);
+							sendName(con, qq, name);
+						}
+					});
+			connect.setCoding("GBK");
+			connect.start();
+
+			return "";
+		}
 
 		// 读取用户列表
 		void readUserList() {
@@ -356,17 +356,17 @@ public class QQChatServerMain {
 				item.con.sendMessage(jsonObject.toString());
 			}
 		}
-		
+
 		// 发送消息给所有人
-				public void sendXmlAll(Long qq, String msg) {
-					JSONObject jsonObject = new JSONObject();
-					jsonObject.put("action", "sendxml");
-					jsonObject.put("data", msg);
-					jsonObject.put("id", qq);
-					for (ChatItem item : list_con) {
-						item.con.sendMessage(jsonObject.toString());
-					}
-				}
+		public void sendXmlAll(Long qq, String msg) {
+			JSONObject jsonObject = new JSONObject();
+			jsonObject.put("action", "sendxml");
+			jsonObject.put("data", msg);
+			jsonObject.put("id", qq);
+			for (ChatItem item : list_con) {
+				item.con.sendMessage(jsonObject.toString());
+			}
+		}
 
 		// 发送图片给所有人
 		public void sendImgAll(Long qq, String msg) {
@@ -394,7 +394,7 @@ public class QQChatServerMain {
 			jsonObject.put("id", id);
 			con.sendMessage(jsonObject.toString());
 		}
-		
+
 		public void sendName(WebSocketConnect con, Long id, String name) {
 			JSONObject jsonObject = new JSONObject();
 			jsonObject.put("action", "username");
@@ -448,7 +448,7 @@ public class QQChatServerMain {
 						String action = jsonObject.optString("action");
 						String data = jsonObject.optString("data");
 						long id = jsonObject.optLong("id");
-						
+
 						if (action.equals("register")) {
 							if (checkUserCon(id)) {
 								sendErr(con, "用户已存在");
@@ -472,52 +472,50 @@ public class QQChatServerMain {
 								sendErr(con, "登录失败");
 							}
 
-							
 						} else if (action.equals("sendmsg")) {
 							MsgItem msgItem = new MsgItem(action, data, id);
-							if(curItem != null){
+							if (curItem != null) {
 								id = curItem.qq;
-							if (checkMsg(msgItem)) {
-								sendMsgAll(id, data);
-								msgItem.id = curItem.qq;
-								addHistoryMsg(msgItem);
-							} else {
-								sendPrompt(con, "消息发送失败");
+								if (checkMsg(msgItem)) {
+									sendMsgAll(id, data);
+									msgItem.id = curItem.qq;
+									addHistoryMsg(msgItem);
+								} else {
+									sendPrompt(con, "消息发送失败");
+								}
 							}
-							}
-						}else if (action.equals("sendxml")) {
+						} else if (action.equals("sendxml")) {
 							MsgItem msgItem = new MsgItem(action, data, id);
-							if(curItem != null){
+							if (curItem != null) {
 								id = curItem.qq;
-							if (checkMsg(msgItem)) {
-								sendXmlAll(id, data);
-								msgItem.id = curItem.qq;
-								addHistoryMsg(msgItem);
-							} else {
-								sendPrompt(con, "消息发送失败");
-							}
+								if (checkMsg(msgItem)) {
+									sendXmlAll(id, data);
+									msgItem.id = curItem.qq;
+									addHistoryMsg(msgItem);
+								} else {
+									sendPrompt(con, "消息发送失败");
+								}
 							}
 						} else if (action.equals("sendimg")) {
 							MsgItem msgItem = new MsgItem(action, data, id);
-							if(curItem != null){
+							if (curItem != null) {
 								id = curItem.qq;
 								if (checkMsg(msgItem)) {
-								sendImgAll(id, data);
-								msgItem.id = curItem.qq;
-								addHistoryMsg(msgItem);
-							} else {
-								sendPrompt(con, "消息发送失败");
+									sendImgAll(id, data);
+									msgItem.id = curItem.qq;
+									addHistoryMsg(msgItem);
+								} else {
+									sendPrompt(con, "消息发送失败");
+								}
 							}
-							}
-							
 
 						} else if (action.equals("exit")) {
 
-						} else if(action.equals("getname")){
-							if(curItem != null){
+						} else if (action.equals("getname")) {
+							if (curItem != null) {
 								getQQName(con, id);
 							}
-							
+
 						}
 					}
 				}

@@ -127,21 +127,10 @@ public class WebUpgradleUtil {
 	public static String WebSocketKey(String clientKey, String serverKey){
 		String temp = clientKey+serverKey;
 		System.out.println(temp);
-//		String sha1;
-//		try {
-//			sha1 = shaEncode(temp);
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//			return "";
-//		}
-//		return base64(sha1);
 	 try {
 		byte[] sha1data =	sha1(temp);
-//		for(int i=0;i<sha1data.length;i++){
-//			System.out.print(String.format("%02x", sha1data[i]));
-//		}
+		System.out.println("sha1长度"+sha1data.length);
 	} catch (Exception e1) {
-		// TODO Auto-generated catch block
 		e1.printStackTrace();
 	}
 	 

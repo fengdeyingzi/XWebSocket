@@ -14,10 +14,10 @@ public class SocketMain {
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
-					
+
 					WebSocketTestWindow window = new WebSocketTestWindow();
 					window.frame.setVisible(true);
-					
+
 				} catch (Exception e) {
 					e.printStackTrace();
 				}

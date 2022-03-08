@@ -7,6 +7,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Vector;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Predicate;
@@ -18,7 +19,7 @@ public class WebSocketServer {
 	private String ip;
 	private int port;
 	ServerSocket server_socket;
-	List<Socket> list_socket;
+	Vector<Socket> list_socket;
 	private ExecutorService mExecutorService = null;
 	private boolean isRun;
 	private WebSocketServerListener listener;
@@ -27,20 +28,23 @@ public class WebSocketServer {
 	public WebSocketServer(String ip, int port) {
 		this.ip = ip;
 		this.port = port;
-		this.list_socket = new ArrayList<Socket>();
+		this.list_socket = new Vector<Socket>();
 
 		/**
 		 * 创建缓存类型的线程池
 		 */
 		mExecutorService = Executors.newCachedThreadPool();
 	}
-	
-	public interface WebSocketServerListener{
-		
+
+	public interface WebSocketServerListener {
+
 		public void onOpen(WebSocketConnect con);
+
 		public void onMessage(WebSocketConnect con, String msg);
+
 		public void onClose(WebSocketConnect con);
-		public void onError(WebSocketConnect con,int code, String error);
+
+		public void onError(WebSocketConnect con, int code, String error);
 	}
 
 	public class WebSocketConnect implements Runnable {
@@ -50,7 +54,7 @@ public class WebSocketServer {
 		private long startTime;
 		private long endTime;
 		private boolean isUpdate;
-		private String serverKey = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";//"d359Fdo6omyqfxyYF7Yacw==";
+		private String serverKey = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";// "d359Fdo6omyqfxyYF7Yacw==";
 		private String clientKey;
 		private WebSocketServerListener listener;
 
@@ -61,16 +65,16 @@ public class WebSocketServer {
 			this.cache_buffer = new ByteBuffer();
 			this.isUpdate = false;
 		}
-		
-		public void setListener(WebSocketServerListener listener){
+
+		public void setListener(WebSocketServerListener listener) {
 			this.listener = listener;
 		}
-		
-		String getIP(){
+
+		String getIP() {
 			return socket.getInetAddress().getHostAddress();
 		}
-		
-		int getID(){
+
+		int getID() {
 			return socket.getPort();
 		}
 
@@ -86,33 +90,32 @@ public class WebSocketServer {
 			}
 			return false;
 		}
-		
-	    //获取一个参数
-	    private String getArg(String head, String item) {
-	        int start = 0;
-	        int end = 0;
-	        int content_len = 0;
 
+		// 获取一个参数
+		private String getArg(String head, String item) {
+			int start = 0;
+			int end = 0;
+			int content_len = 0;
 
-	        //获取Content-Length
-	        start = head.indexOf(item);
-	        if(start<0){
-	        	start = head.indexOf(item.toLowerCase());
-	        }
-	        if (start >= 0) {
-	            String temp = head.substring(start);
+			// 获取Content-Length
+			start = head.indexOf(item);
+			if (start < 0) {
+				start = head.indexOf(item.toLowerCase());
+			}
+			if (start >= 0) {
+				String temp = head.substring(start);
 
-	            start = temp.indexOf(":");
-	            if (start >= 0) {
-	                for (int i = 0; i < temp.length(); i++) {
-	                    if (temp.charAt(i) == '\r' || temp.charAt(i) == '\n') {
-	                        return temp.substring(start + 1, i).trim();
-	                    }
-	                }
-	            }
-	        }
-	        return null;
-	    }
+				start = temp.indexOf(":");
+				if (start >= 0) {
+					for (int i = 0; i < temp.length(); i++) {
+						if (temp.charAt(i) == '\r' || temp.charAt(i) == '\n') {
+							return temp.substring(start + 1, i).trim();
+						}
+					}
+				}
+			}
+			return null;
+		}
 
 		public void run() {
 			InputStream inputStream;
@@ -126,34 +129,30 @@ public class WebSocketServer {
 							String data = new String(cache_buffer.getBytes(), "UTF-8");
 							System.out.println(data);
 							clientKey = getArg(data, "Sec-WebSocket-Key");
-							if(clientKey == null){
+							if (clientKey == null) {
 								System.out.println("获取客户端key失败");
-								String sendData = "HTTP/1.1 404 not found\r\n" 
-										+ "Content-Length: 13\r\n"
-										+ "\r\n"+"404 not found";
+								String sendData = "HTTP/1.1 404 not found\r\n" + "Content-Length: 13\r\n" + "\r\n"
+										+ "404 not found";
 								socket.getOutputStream().write(sendData.getBytes());
-							}else{
+							} else {
 								cache_buffer.clear();
-							
-							String key = WebUpgradleUtil.WebSocketKey(clientKey, serverKey);
-							// 写入
-							String sendData = "HTTP/1.1 101 Switching Protocols\r\n" 
-									+ "Connection: Upgrade\r\n"
-									+ "Upgrade: websocket\r\n"
-									+ "Sec-WebSocket-Accept: "+key+"\r\n" 
-									+ "Upgradle: websocket\r\n"
-									+ "\r\n";
-							isUpdate = true;
-							socket.getOutputStream().write(sendData.getBytes());
-							System.out.println("协议已升级");
-							if(listener != null){
-								listener.onOpen(this);
-							} else{
-								System.out.println("监听器为空");
+
+								String key = WebUpgradleUtil.WebSocketKey(clientKey, serverKey);
+								// 写入
+								String sendData = "HTTP/1.1 101 Switching Protocols\r\n" + "Connection: Upgrade\r\n"
+										+ "Upgrade: websocket\r\n" + "Sec-WebSocket-Accept: " + key + "\r\n"
+										+ "Upgradle: websocket\r\n" + "\r\n";
+								isUpdate = true;
+								socket.getOutputStream().write(sendData.getBytes());
+								System.out.println("协议已升级");
+								if (listener != null) {
+									listener.onOpen(this);
+								} else {
+									System.out.println("监听器为空");
+								}
+								// sendMessage("hello");
 							}
-//							sendMessage("hello");
-							}
-							
+
 						}
 					} else {
 						byte[] frame = readFrame();
@@ -161,7 +160,7 @@ public class WebSocketServer {
 							System.out.println("收到数据");
 							String msg = new String(frame, "UTF-8");
 							System.out.println(msg);
-							if(listener!=null){
+							if (listener != null) {
 								listener.onMessage(this, msg);
 							}
 						}
@@ -170,18 +169,19 @@ public class WebSocketServer {
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
-				if(listener!=null){
+				if (listener != null) {
 					listener.onError(this, 1, e.toString());
+					list_socket.remove(this);
 				}
 			}
 
 		}
-		
-		public long getEndTime(){
+
+		public long getEndTime() {
 			return this.endTime;
 		}
-		
-		public long getStartTime(){
+
+		public long getStartTime() {
 			return this.startTime;
 		}
 
@@ -241,30 +241,36 @@ public class WebSocketServer {
 					}
 				}
 				try {
-					
-					if (socket != null){
+
+					if (socket != null) {
 						socket.getOutputStream().write(sendData);
 						endTime = System.currentTimeMillis();
 						System.out.println("----------- 发送 \n" + text);
 					}
-						
+
 					startTime = System.currentTimeMillis();
 				} catch (IOException e) {
 
 					e.printStackTrace();
 					socket = null;
-					// if(listener !=null)listener.onError(this, 3);
+					if (listener != null) {
+						listener.onError(this, 2, e.toString());
+						list_socket.remove(this);
+					}
 				}
 			} catch (UnsupportedEncodingException e) {
-
 				e.printStackTrace();
+				if (listener != null) {
+					listener.onError(this, 2, e.toString());
+					list_socket.remove(this);
+				}
 			}
 
 		}
 
 		// 读取一帧数据 如果读取失败就返回null
 		public byte[] readFrame() throws IOException {
-			
+
 			byte[] maskKey = new byte[] { 0x66, 0x66, 0x66, 0x66 };
 
 			// 1字节
@@ -334,10 +340,10 @@ public class WebSocketServer {
 			int ptr = 0;
 			byte temp1;
 			byte temp2;
-//			data[ptr++] = maskKey[0];
-//			data[ptr++] = maskKey[1];
-//			data[ptr++] = maskKey[2];
-//			data[ptr++] = maskKey[3];
+			// data[ptr++] = maskKey[0];
+			// data[ptr++] = maskKey[1];
+			// data[ptr++] = maskKey[2];
+			// data[ptr++] = maskKey[3];
 			for (int i = 0, count = 0; i < data.length; i++) {
 				temp1 = maskKey[count];
 				temp2 = data[i];
@@ -356,29 +362,36 @@ public class WebSocketServer {
 		System.out.println("开始启动");
 		try {
 			server_socket = new ServerSocket(port);
-			while (isRun) {
-				final Socket mSocket = server_socket.accept();
-				list_socket.add(mSocket);
-				WebSocketConnect connect = new WebSocketConnect(mSocket);
-				if(this.listener != null){
-					connect.setListener(this.listener);
-				} else{
-					System.out.println("监听器为空 websocketserver");
-				}
-				
-				mExecutorService.execute(connect);
-			}
-
 		} catch (IOException e) {
 			e.printStackTrace();
+		} finally {
+			while (isRun) {
+				Socket mSocket;
+				try {
+					mSocket = server_socket.accept();
+					list_socket.add(mSocket);
+					WebSocketConnect connect = new WebSocketConnect(mSocket);
+					if (this.listener != null) {
+						connect.setListener(this.listener);
+					} else {
+						System.out.println("监听器为空 websocketserver");
+					}
+
+					mExecutorService.execute(connect);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+
+			}
 		}
+
 	}
-	
-	public void setListener(WebSocketServerListener listener){
-		System.out.println("设置监听器 websocket 1");
+
+	public void setListener(WebSocketServerListener listener) {
+//		System.out.println("设置监听器 websocket 1");
 		this.listener = listener;
-		if(this.listener != null){
-			System.out.println("设置监听器 websocket 2");
+		if (this.listener != null) {
+//			System.out.println("设置监听器 websocket 2");
 		}
 	}
 

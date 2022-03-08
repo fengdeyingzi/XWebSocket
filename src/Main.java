@@ -1,6 +1,7 @@
 import java.awt.EventQueue;
 
-import com.xl.window.WebSocketTestWindow;
+import com.xl.window.SocketTestWindow;
+
 
 import android.os.Looper;
 
@@ -15,7 +16,7 @@ public class Main {
 			public void run() {
 				try {
 					
-					WebSocketTestWindow window = new WebSocketTestWindow();
+					SocketTestWindow window = new SocketTestWindow();
 					window.frame.setVisible(true);
 					
 				} catch (Exception e) {
