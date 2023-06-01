@@ -41,6 +41,7 @@ public class SocketClient{
     private static int WHAT_ONCLOSE = 3;
     private static int WHAT_ONERROR = 4;
     boolean useThread = false; //是否使用线程通信
+    String coding = "UTF-8";
 
 
     public static void main(String[] args) {
@@ -163,11 +164,12 @@ public class SocketClient{
             if(text.charAt(text.length()-1)!='\n'){
                 text = text+"";
             }
-            sendData = text.getBytes("UTF-8");
+            sendData = text.getBytes(coding);
             System.out.println("----------- 发送 \n"+text);
             if(socket!=null){
                 outputStream.write(sendData);
             }
+            System.out.println("----------- 发送成功");
             startTime = System.currentTimeMillis();
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
@@ -250,7 +252,7 @@ public class SocketClient{
 
         
 
-        System.out.println("连接websocket" + ip);
+        System.out.println("连接socket" + ip);
         try {
             socket = new Socket();
             socket.connect(new InetSocketAddress( ip, port ), 5000);
@@ -280,9 +282,9 @@ public class SocketClient{
                     byte[] msgData = readFrame();
 
                     if(msgData != null){
-                        System.out.println("--------- 读取帧成功 \n "+new String(msgData));
+                        System.out.println("--------- 读取帧成功 \n "+new String(msgData, coding));
                         startTime = System.currentTimeMillis();
-                        sendToHandler(WHAT_ONMESSAGE, new String(msgData),0);
+                        sendToHandler(WHAT_ONMESSAGE, new String(msgData, coding),0);
 
                         if(isWrite == false){
 //								sendMessage("{\"action\":\"setname\", \"data\":\"test\"}");

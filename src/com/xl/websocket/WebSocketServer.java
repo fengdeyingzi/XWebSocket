@@ -157,9 +157,13 @@ public class WebSocketServer {
 					} else {
 						byte[] frame = readFrame();
 						if (frame != null) {
-							System.out.println("收到数据");
+							
 							String msg = new String(frame, "UTF-8");
-							System.out.println(msg);
+							if(!"#".equals(msg)){
+								System.out.println("收到数据");
+								System.out.println(msg);
+							}
+							
 							if (listener != null) {
 								listener.onMessage(this, msg);
 							}
@@ -171,6 +175,11 @@ public class WebSocketServer {
 				e.printStackTrace();
 				if (listener != null) {
 					listener.onError(this, 1, e.toString());
+					try {
+						socket.close();
+					} catch (IOException e1) {
+						e1.printStackTrace();
+					}
 					list_socket.remove(this);
 				}
 			}
@@ -183,6 +192,17 @@ public class WebSocketServer {
 
 		public long getStartTime() {
 			return this.startTime;
+		}
+		
+		public void close(){
+			if(socket!= null){
+				try {
+					socket.close();
+				} catch (IOException e) {
+					System.out.println("关闭socket失败");
+					e.printStackTrace();
+				}
+			}
 		}
 
 		// 发送字符数据
@@ -245,7 +265,7 @@ public class WebSocketServer {
 					if (socket != null) {
 						socket.getOutputStream().write(sendData);
 						endTime = System.currentTimeMillis();
-						System.out.println("----------- 发送 \n" + text);
+//						System.out.println("----------- 发送 \n" + text);
 					}
 
 					startTime = System.currentTimeMillis();
@@ -383,6 +403,14 @@ public class WebSocketServer {
 				}
 
 			}
+			//stop了，断开所有socket
+			for(int n=0;n<list_socket.size();n++){
+				try{
+					list_socket.get(n).close();
+				}catch(Exception e2){
+					System.out.println("断开socket异常："+e2.toString());
+				}
+			}
 		}
 
 	}
@@ -398,6 +426,7 @@ public class WebSocketServer {
 	// 停止运行
 	public void stop() {
 		isRun = false;
+		
 	}
 
 	// onOpen

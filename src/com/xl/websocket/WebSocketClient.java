@@ -281,7 +281,7 @@ public class WebSocketClient{
 			sendBuffer.append("Upgrade:websocket\r\n");
 			sendBuffer.append("\r\n");
 
-			System.out.println("连接websocket" + ip);
+			System.out.println("连接websocket:" + ip);
 			try {
 				socket = new Socket(ip, port);
 				if(isSendHearBeat)

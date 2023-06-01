@@ -305,13 +305,13 @@ public class QQChatServerMain {
 		boolean checkMsg(MsgItem msgitem) {
 			int lines = 0;
 			if (msgitem.action.equals("sendmsg")) {
-				if (msgitem.data.length() > 1024) {
+				if (msgitem.data.length() > 1024 * 10) {
 					return false;
 				}
 				for (int i = 0; i < msgitem.data.length(); i++) {
 					if (msgitem.data.charAt(i) == '\n') {
 						lines++;
-						if (lines > 30) {
+						if (lines > 300) {
 							return false;
 						}
 					}
@@ -353,7 +353,12 @@ public class QQChatServerMain {
 			jsonObject.put("data", msg);
 			jsonObject.put("id", qq);
 			for (ChatItem item : list_con) {
-				item.con.sendMessage(jsonObject.toString());
+				try{
+					item.con.sendMessage(jsonObject.toString());
+				}catch(Exception e1){
+					System.out.println("发送失败："+item.qq);
+				}
+				
 			}
 		}
 
@@ -364,7 +369,12 @@ public class QQChatServerMain {
 			jsonObject.put("data", msg);
 			jsonObject.put("id", qq);
 			for (ChatItem item : list_con) {
-				item.con.sendMessage(jsonObject.toString());
+				try{
+					item.con.sendMessage(jsonObject.toString());
+				}catch(Exception e1){
+					System.out.println("发送xml失败："+item.qq);
+				}
+				
 			}
 		}
 
@@ -375,7 +385,13 @@ public class QQChatServerMain {
 			jsonObject.put("data", msg);
 			jsonObject.put("id", qq);
 			for (ChatItem item : list_con) {
-				item.con.sendMessage(jsonObject.toString());
+				try{
+					item.con.sendMessage(jsonObject.toString());
+				}catch(Exception e1){
+					System.out.print("发送图片失败："+item.qq);
+				}
+					
+				
 			}
 		}
 
@@ -408,7 +424,12 @@ public class QQChatServerMain {
 			jsonObject.put("action", "prompt");
 			jsonObject.put("data", msg);
 			// jsonObject.put("id", id);
-			con.sendMessage(jsonObject.toString());
+			try{
+				con.sendMessage(jsonObject.toString());
+			}catch(Exception e1){
+				System.out.println("发送提示失败");
+			}
+			
 		}
 
 		public void sendErr(WebSocketConnect con, String msg) {
@@ -420,7 +441,7 @@ public class QQChatServerMain {
 		}
 
 		public void start() {
-			WebSocketServer server = new WebSocketServer("127.0.0.1", 2024);
+			final WebSocketServer server = new WebSocketServer("127.0.0.1", 2024);
 
 			server.setListener(new WebSocketServerListener() {
 
@@ -456,6 +477,10 @@ public class QQChatServerMain {
 								regUser(id, data);
 								saveUserList();
 								ChatItem userItem = new ChatItem(id, con);
+								//发送提示给其他人
+								for(int i=0;i<list_con.size();i++){
+									sendPrompt(list_con.get(i).con, "用户"+userItem.getQQ()+"进入房间，当前在线"+(list_con.size()+1)+"人");
+								}
 								list_con.add(userItem);
 								sendHistoryMsg(con);
 								sendPrompt(con, "当前在线" + list_con.size() + "人");
@@ -464,10 +489,15 @@ public class QQChatServerMain {
 							if (checkUser(id, data)) {
 
 								ChatItem userItem = new ChatItem(id, con);
+								//发送提示给其他人
+								for(int i=0;i<list_con.size();i++){
+									sendPrompt(list_con.get(i).con, "用户"+userItem.getQQ()+"进入房间，当前在线"+(list_con.size()+1)+"人");
+								}
 								list_con.add(userItem);
 								sendHistoryMsg(con);
 								sendPrompt(con, "登录成功");
 								sendPrompt(con, "当前在线" + list_con.size() + "人");
+								
 							} else {
 								sendErr(con, "登录失败");
 							}
@@ -549,11 +579,18 @@ public class QQChatServerMain {
 				@Override
 				public void run() {
 					while (true) {
-						for (int i = 0; i < list_con.size(); i++) {
+						for (int i = list_con.size()-1; i >=0; i--) {
 							WebSocketConnect connect = list_con.get(i).con;
 							if (connect.getEndTime() < System.currentTimeMillis() - 60000) {
 								System.out.println("用户" + list_con.get(i).qq + "已掉线");
+								long iqq = list_con.get(i).qq;
+								ChatItem exitItem = list_con.get(i);
+								exitItem.con.close();
 								list_con.remove(i);
+								for(int n=0;n<list_con.size();n++){
+									ChatItem item = list_con.get(n);
+									sendPrompt(item.con, "用户"+iqq + "已掉线");
+								}
 								break;
 							}
 						}
